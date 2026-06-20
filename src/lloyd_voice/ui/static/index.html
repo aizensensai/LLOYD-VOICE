@@ -17,6 +17,13 @@
       <div class="status-bar">
         <span id="status-dot" class="status-dot offline"></span>
         <span id="status-text" class="status-text">Offline</span>
+        <select id="model-select" class="model-select">
+          <option value="tiny">tiny</option>
+          <option value="base" selected>base</option>
+          <option value="small">small</option>
+          <option value="medium">medium</option>
+          <option value="large-v3">large-v3</option>
+        </select>
         <span id="model-info" class="model-info"></span>
       </div>
     </header>
@@ -64,6 +71,8 @@
         </div>
       </div>
     </main>
+
+    <div id="toast" class="toast"></div>
 
     <footer>
       <div class="connection-info">

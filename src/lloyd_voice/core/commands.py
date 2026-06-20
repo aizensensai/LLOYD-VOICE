@@ -55,6 +55,7 @@ def _build_patterns():
         (re.compile(r'\bdelete\s+(?:all|everything)\s*$', re.IGNORECASE), CommandType.DELETE_ALL, lambda m: {}),
         (re.compile(r'\bchange\s+(.+?)\s+to\s+(.+?)\s*$', re.IGNORECASE), CommandType.REPLACE, lambda m: {'old': m.group(1).strip(), 'new': m.group(2).strip()}),
         (re.compile(r'\breplace\s+(.+?)\s+with\s+(.+?)\s*$', re.IGNORECASE), CommandType.REPLACE, lambda m: {'old': m.group(1).strip(), 'new': m.group(2).strip()}),
+        (re.compile(r'\bcapitalize\s*$', re.IGNORECASE), CommandType.CAPITALIZE, lambda m: {}),
         (re.compile(r'\bcapitalize\s+(?:that|this|the\s+word)\s*$', re.IGNORECASE), CommandType.CAPITALIZE, lambda m: {}),
         (re.compile(r'\bnew\s+line\s*$', re.IGNORECASE), CommandType.NEW_LINE, lambda m: {}),
         (re.compile(r'\bnew\s+paragraph\s*$', re.IGNORECASE), CommandType.NEW_PARAGRAPH, lambda m: {}),
@@ -170,7 +171,7 @@ def apply_command(document: str, command: VoiceCommand, history: list[str]) -> t
     elif command.type == CommandType.CAPITALIZE:
         words = document.split()
         if words:
-            words[-1] = words[-1].capitalize()
+            words[0] = words[0].capitalize()
             return ' '.join(words), command
         return document, command
 
@@ -219,14 +220,31 @@ def _is_filler(text: str) -> bool:
     return len(words) <= 2 and all(w.strip('.,!?') in _FILLER_WORDS for w in words)
 
 
+def _strip_leading_fillers(text: str) -> str:
+    words = text.strip().split()
+    result = []
+    started = False
+    for w in words:
+        clean = w.strip('.,!?').lower()
+        if not started and clean in _FILLER_WORDS:
+            continue
+        started = True
+        result.append(w)
+    return ' '.join(result)
+
+
 def process_utterance(document: str, utterance: str, history: list[str]) -> tuple[str, Optional[VoiceCommand], Optional[str]]:
     if not utterance or not utterance.strip():
         return document, None, None
     command = parse_command(utterance)
     if command:
         clean_text = strip_command_from_text(utterance)
-        if clean_text and not _is_filler(clean_text):
-            interim = _dedup_append(document, clean_text) if document else clean_text
+        if clean_text:
+            cleaned = _strip_leading_fillers(clean_text)
+            if cleaned and not _is_filler(cleaned):
+                interim = _dedup_append(document, cleaned) if document else cleaned
+            else:
+                interim = document
         else:
             interim = document
         new_doc, _ = apply_command(interim, command, history)

@@ -123,6 +123,23 @@ h1 {
   font-weight: 600;
 }
 
+.model-select {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.model-select:hover,
+.model-select:focus {
+  border-color: var(--accent-5);
+}
+
 .model-info {
   color: var(--text-muted);
   font-size: 0.7rem;
@@ -381,6 +398,35 @@ footer {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.error {
+  border-color: var(--accent-1);
+  color: var(--accent-1);
 }
 
 @keyframes rainbow-shift {

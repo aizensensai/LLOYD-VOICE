@@ -22,6 +22,8 @@ class LloydVoiceClient {
     this.sessionDuration = document.getElementById('session-duration');
     this.wordCount = document.getElementById('word-count');
     this.modelInfo = document.getElementById('model-info');
+    this.modelSelect = document.getElementById('model-select');
+    this.toast = document.getElementById('toast');
     this.copyBtn = document.getElementById('copy-btn');
     this.clearBtn = document.getElementById('clear-btn');
 
@@ -33,6 +35,7 @@ class LloydVoiceClient {
     this.recordBtn.addEventListener('click', () => this._toggleRecording());
     this.copyBtn.addEventListener('click', () => this._copyText());
     this.clearBtn.addEventListener('click', () => this._clearText());
+    this.modelSelect.addEventListener('change', () => this._setModel(this.modelSelect.value));
 
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space' && !e.repeat &&
@@ -166,9 +169,14 @@ class LloydVoiceClient {
           this.paused = data.paused;
           this._updateRecordingUI();
         }
-        if (data.model) {
-          this.modelInfo.textContent = data.model;
-        }
+    if (data.model) {
+      this.modelInfo.textContent = data.model;
+      this.modelSelect.value = data.model;
+    }
+        break;
+
+      case 'error':
+        this._showToast(data.message || 'An error occurred', 'error');
         break;
 
       case 'summary':
@@ -299,6 +307,20 @@ class LloydVoiceClient {
 
   _showSummary(data) {
     console.log('Session summary:', data);
+  }
+
+  _showToast(message, type) {
+    this.toast.textContent = message;
+    this.toast.className = 'toast visible ' + (type || 'info');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this.toast.className = 'toast';
+    }, 4000);
+  }
+
+  _setModel(model) {
+    this._send({ action: 'set_model', model: model });
+    this._showToast('Model: ' + model, 'info');
   }
 
   _send(data) {
