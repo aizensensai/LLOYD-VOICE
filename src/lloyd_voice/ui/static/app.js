@@ -192,6 +192,7 @@ class LloydVoiceClient {
       span.textContent = data.text;
       this.transcript.appendChild(span);
       this.transcript.appendChild(document.createTextNode(' '));
+      this._flashCommandItem(data.text);
     } else if (data.document) {
       this.transcript.textContent = data.document;
     }
@@ -200,6 +201,26 @@ class LloydVoiceClient {
       this._updateWordCount(data.document);
     }
     this.transcript.scrollTop = this.transcript.scrollHeight;
+  }
+
+  _flashCommandItem(text) {
+    const lower = text.toLowerCase();
+    let cmd = '';
+    if (/delete\s+(that|this|it)|remove\s+(that|this|it|the\s+last)/.test(lower)) cmd = 'delete_last';
+    else if (/\b(undo|no\b|wait\s+no|scratch\s+that|never\s+mind)/.test(lower)) cmd = 'undo';
+    else if (/\b(redo|remake)\b/.test(lower)) cmd = 'redo';
+    else if (/clear\s+(all|everything)/.test(lower)) cmd = 'clear';
+    else if (/\b(change|replace)\b/.test(lower)) cmd = 'replace';
+    else if (/new\s+line/.test(lower)) cmd = 'new_line';
+    else if (/\b(period|comma|question|exclamation)\b/.test(lower)) cmd = 'punctuation';
+    else if (/\bstop\b/.test(lower)) cmd = 'stop_listening';
+
+    if (!cmd) return;
+    const el = document.querySelector(`.commands-panel [data-cmd="${cmd}"]`);
+    if (!el) return;
+    el.classList.add('flash');
+    clearTimeout(el._flashTimer);
+    el._flashTimer = setTimeout(() => el.classList.remove('flash'), 1200);
   }
 
   _updateWordCount(text) {
@@ -252,10 +273,12 @@ class LloydVoiceClient {
       this.statusDot.className = 'status-dot recording';
       this.statusText.textContent = this.paused ? 'PAUSED' : 'RECORDING';
       this.waveform.setRecording(true);
+      this.transcript.classList.add('recording');
     } else {
       this.statusDot.className = 'status-dot online';
       this.statusText.textContent = 'READY';
       this.waveform.setRecording(false);
+      this.transcript.classList.remove('recording');
     }
   }
 

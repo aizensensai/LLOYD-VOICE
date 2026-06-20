@@ -247,6 +247,26 @@ main {
   pointer-events: none;
 }
 
+.transcript.recording::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: var(--accent-5);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink-cursor 0.8s step-end infinite;
+}
+
+.transcript.recording:empty::after {
+  margin-left: 0;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .transcript::-webkit-scrollbar {
   width: 6px;
 }
@@ -354,6 +374,12 @@ main {
   padding: 10px 16px;
   background: var(--bg-secondary);
   font-size: 0.8rem;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.cmd-item.flash {
+  background: rgba(255, 212, 59, 0.12);
+  box-shadow: inset 0 0 20px rgba(255, 212, 59, 0.08);
 }
 
 .cmd-item kbd {
