@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lloyd-voice"
+version = "0.1.0"
+description = "Open-source voice dictation with real-time transcription, voice editing commands, and a rainbow waveform UI"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+keywords = ["speech-to-text", "voice-dictation", "whisper", "transcription", "voice-commands"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "faster-whisper>=1.0.0",
+    "sounddevice>=0.4.6",
+    "numpy>=1.24.0",
+    "aiohttp>=3.9.0",
+    "aiohttp-cors>=0.7.0",
+    "click>=8.1.0",
+    "pyperclip>=1.8.2",
+]
+
+[project.scripts]
+lloyd-voice = "lloyd_voice.cli:main"
+lloyd = "lloyd_voice.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/lloyd-voice/lloyd-voice"
+Repository = "https://github.com/lloyd-voice/lloyd-voice"
+Documentation = "https://github.com/lloyd-voice/lloyd-voice#readme"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"lloyd_voice.ui" = ["static/*"]
+
+[project.optional-dependencies]
+audio = [
+    "soundfile>=0.12.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.1.0",
+]

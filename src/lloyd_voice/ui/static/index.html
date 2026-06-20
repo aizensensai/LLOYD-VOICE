@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>Lloyd Voice</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="logo">
+        <span class="logo-icon">◈</span>
+        <h1>Lloyd Voice</h1>
+      </div>
+      <div class="status-bar">
+        <span id="status-dot" class="status-dot offline"></span>
+        <span id="status-text" class="status-text">Offline</span>
+        <span id="model-info" class="model-info"></span>
+      </div>
+    </header>
+
+    <main>
+      <div class="waveform-container">
+        <canvas id="waveform" width="800" height="200"></canvas>
+        <div class="waveform-overlay">
+          <button id="record-btn" class="record-btn" title="Toggle recording (hold Space)">
+            <svg viewBox="0 0 24 24" width="32" height="32">
+              <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.2"/>
+              <circle id="record-icon" cx="12" cy="12" r="6" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="transcript-container">
+        <div id="transcript" class="transcript" contenteditable="true" data-placeholder="Start speaking... text will appear here"></div>
+        <div class="transcript-controls">
+          <button id="copy-btn" class="ctrl-btn" title="Copy to clipboard">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M16 1H4a2 2 0 00-2 2v14h2V3h12V1zm3 4H8a2 2 0 00-2 2v14a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2zm0 16H8V7h11v14z" fill="currentColor"/></svg>
+          </button>
+          <button id="clear-btn" class="ctrl-btn" title="Clear transcript">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+          </button>
+          <span id="word-count" class="word-count">0 words</span>
+        </div>
+      </div>
+
+      <div class="commands-panel">
+        <div class="panel-header">
+          <span class="panel-title">Voice Commands</span>
+          <span class="panel-badge">say one of these</span>
+        </div>
+        <div class="commands-grid">
+          <div class="cmd-item"><kbd>"delete that"</kbd><span>Remove last utterance</span></div>
+          <div class="cmd-item"><kbd>"no / undo"</kbd><span>Undo last action</span></div>
+          <div class="cmd-item"><kbd>"redo"</kbd><span>Redo last undone action</span></div>
+          <div class="cmd-item"><kbd>"clear all"</kbd><span>Clear entire document</span></div>
+          <div class="cmd-item"><kbd>"change X to Y"</kbd><span>Find & replace text</span></div>
+          <div class="cmd-item"><kbd>"new line"</kbd><span>Insert line break</span></div>
+          <div class="cmd-item"><kbd>"period / comma"</kbd><span>Insert punctuation</span></div>
+          <div class="cmd-item"><kbd>"stop listening"</kbd><span>Pause transcription</span></div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="connection-info">
+        <span id="connection-status">Disconnected</span>
+        <span id="latency" class="latency"></span>
+      </div>
+      <div class="session-info">
+        <span id="session-duration">00:00</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

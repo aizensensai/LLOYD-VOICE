@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Whisper model cache
+~/.cache/whisper/
+~/.cache/faster_whisper/
+
+# Audio recordings
+*.wav
+*.mp3
+*.flac
+!tests/fixtures/*
+
+# Logs
+*.log
+
+# Config
+lloyd_voice_config.json
