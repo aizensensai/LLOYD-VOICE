@@ -35,9 +35,9 @@ lloyd-voice = "lloyd_voice.cli:main"
 lloyd = "lloyd_voice.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/lloyd-voice/lloyd-voice"
-Repository = "https://github.com/lloyd-voice/lloyd-voice"
-Documentation = "https://github.com/lloyd-voice/lloyd-voice#readme"
+Homepage = "https://github.com/aizensensai/LLOYD-VOICE"
+Repository = "https://github.com/aizensensai/LLOYD-VOICE"
+Documentation = "https://github.com/aizensensai/LLOYD-VOICE#readme"
 
 [tool.setuptools.packages.find]
 where = ["src"]

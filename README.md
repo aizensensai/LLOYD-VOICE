@@ -30,7 +30,7 @@ pip install lloyd-voice
 Or from source:
 
 ```bash
-git clone https://github.com/lloyd-voice/lloyd-voice.git
+git clone https://github.com/aizensensai/LLOYD-VOICE.git
 cd lloyd-voice
 pip install -e .
 ```
