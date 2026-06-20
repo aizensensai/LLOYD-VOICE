@@ -337,17 +337,17 @@ class RainbowWaveform {
     this.ctx = this.canvas.getContext('2d');
     this.active = false;
     this.recording = false;
-    this.audioData = {
-      rms: 0,
-      peak: 0,
-      waveform: [],
-    };
+    this.audioData = { rms: 0, peak: 0, waveform: [] };
 
+    this._smoothRms = 0;
+    this._smoothPeak = 0;
+    this._displayRms = 0;
     this._history = [];
     this._maxHistory = 120;
     this._phase = 0;
     this._particles = [];
-    this._resolution = 4;
+    this._sparkles = [];
+    this._breath = 0;
 
     this._setupCanvas();
     this._animate();
@@ -374,6 +374,8 @@ class RainbowWaveform {
     if (!active) {
       this._history = [];
       this._particles = [];
+      this._sparkles = [];
+      this._smoothRms = 0;
     }
   }
 
@@ -383,9 +385,11 @@ class RainbowWaveform {
 
   updateAudioLevel(data) {
     if (!this.active) return;
-    this.audioData = data;
+    this._rawData = data;
+    this._smoothRms = this._smoothRms * 0.7 + data.rms * 0.3;
+    this._smoothPeak = this._smoothPeak * 0.7 + data.peak * 0.3;
     if (data.waveform && data.waveform.length > 0) {
-      this._history.push({ ...data, waveform: [...data.waveform] });
+      this._history.push({ rms: data.rms, waveform: [...data.waveform] });
       if (this._history.length > this._maxHistory) {
         this._history.shift();
       }
@@ -411,16 +415,21 @@ class RainbowWaveform {
       return;
     }
 
-    this._phase += 0.02;
+    this._phase += 0.015;
+    this._breath += 0.025;
 
-    if (this.recording && this.audioData.rms > 0.001) {
+    const targetRms = this.recording && this._rawData ? this._smoothRms : 0;
+    this._displayRms += (targetRms - this._displayRms) * 0.12;
+
+    if (this.recording && this._displayRms > 0.001) {
+      this._drawBackgroundBars(ctx, w, h);
       this._drawActiveWaveform(ctx, w, h, cx, cy);
       this._drawParticles(ctx, w, h, cx, cy);
     } else {
       this._drawIdleWaveform(ctx, w, h, cx, cy);
     }
 
-    this._drawCenterGlow(ctx, cx, cy);
+    this._drawCenterGlow(ctx, cx, cy, w);
   }
 
   _drawInactive(ctx, w, h, cx, cy) {
@@ -432,7 +441,6 @@ class RainbowWaveform {
     ctx.strokeStyle = gradient;
     ctx.lineWidth = 1;
     ctx.beginPath();
-
     for (let x = 0; x < w; x += 2) {
       const y = cy + Math.sin(x * 0.02 + this._phase) * 4;
       x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -446,6 +454,7 @@ class RainbowWaveform {
   }
 
   _drawIdleWaveform(ctx, w, h, cx, cy) {
+    const breathe = 1 + Math.sin(this._breath) * 0.15;
     const gradient = ctx.createLinearGradient(0, 0, w, 0);
     gradient.addColorStop(0, '#2a2a3e');
     gradient.addColorStop(0.3, '#4dabf7');
@@ -455,23 +464,49 @@ class RainbowWaveform {
 
     ctx.strokeStyle = gradient;
     ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.4;
-    ctx.beginPath();
+    ctx.globalAlpha = 0.3 + Math.sin(this._breath * 0.7) * 0.1;
 
+    ctx.beginPath();
     for (let x = 0; x < w; x += 2) {
       const envelope = this._getEnvelope(x, w);
-      const y = cy + Math.sin(x * 0.03 + this._phase * 0.5) * 8 * envelope;
+      const wave = Math.sin(x * 0.03 + this._phase * 0.5);
+      const y = cy + wave * 8 * envelope * breathe;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.08;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      const envelope = this._getEnvelope(x, w);
+      const wave = Math.sin(x * 0.03 + this._phase * 0.5 + 0.3);
+      const y = cy + wave * 10 * envelope * breathe;
       x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
 
+  _drawBackgroundBars(ctx, w, h) {
+    const barCount = Math.floor(w / 12);
+    const barWidth = 4;
+    const gap = 8;
+    ctx.globalAlpha = 0.06;
+    for (let i = 0; i < barCount; i++) {
+      const x = i * (barWidth + gap) + gap / 2;
+      const barH = (0.3 + Math.sin(i * 0.5 + this._phase * 2) * 0.3) * h * 0.4;
+      const hue = (i * 8 + this._phase * 30) % 360;
+      ctx.fillStyle = `hsla(${hue}, 80%, 60%, 0.3)`;
+      ctx.fillRect(x, h * 0.5 - barH / 2, barWidth, barH);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   _drawActiveWaveform(ctx, w, h, cx, cy) {
     const centerY = h * 0.45;
-    const audio = this.audioData;
-    const rms = Math.min(audio.rms * 400, 1);
-    const peak = Math.min(audio.peak * 300, 1);
+    const audio = this._rawData || this.audioData;
+    const rms = Math.min(this._displayRms * 400, 1);
     const amplitude = Math.max(rms * h * 0.35, 6);
     const history = this._history;
     const len = history.length;
@@ -490,22 +525,19 @@ class RainbowWaveform {
 
     const samples = Math.min(audio.waveform.length, 200);
     if (samples > 0) {
-      const step = w / Math.max(samples - 1, 1);
-
       for (let pass = 0; pass < 2; pass++) {
-        const lineWidth = pass === 0 ? 4 : 2;
-        const alpha = pass === 0 ? 0.3 : 1;
-        ctx.globalAlpha = alpha;
+        const lineWidth = pass === 0 ? 5 : 2.5;
+        ctx.globalAlpha = pass === 0 ? 0.25 : 0.85;
         ctx.lineWidth = lineWidth;
-
         ctx.beginPath();
+
         for (let i = 0; i < samples; i++) {
           const x = (i / Math.max(samples - 1, 1)) * w;
-          const sampleVal = Math.abs(audio.waveform[i] || 0);
-          const y = centerY - sampleVal * amplitude * 1.5;
+          const sv = Math.abs(audio.waveform[i] || 0);
+          const y = centerY - sv * amplitude * 1.5;
 
           if (pass === 0) {
-            ctx.strokeStyle = `rgba(100, 100, 200, ${0.15 + sampleVal * 0.3})`;
+            ctx.strokeStyle = `rgba(120, 120, 220, ${0.15 + sv * 0.35})`;
           } else {
             const t = i / Math.max(samples - 1, 1);
             ctx.strokeStyle = gradient;
@@ -513,36 +545,33 @@ class RainbowWaveform {
 
           if (i === 0) ctx.moveTo(x, y);
           else {
-            const prevX = ((i - 1) / Math.max(samples - 1, 1)) * w;
-            const prevY = centerY - Math.abs(audio.waveform[i - 1] || 0) * amplitude * 1.5;
-            const cpX = (prevX + x) / 2;
-            ctx.quadraticCurveTo(cpX, prevY, x, y);
+            const px = ((i - 1) / Math.max(samples - 1, 1)) * w;
+            const py = centerY - Math.abs(audio.waveform[i - 1] || 0) * amplitude * 1.5;
+            ctx.quadraticCurveTo((px + x) / 2, py, x, y);
           }
         }
         ctx.stroke();
       }
 
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.5;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let i = 0; i < samples; i++) {
         const x = (i / Math.max(samples - 1, 1)) * w;
-        const sampleVal = Math.abs(audio.waveform[i] || 0);
-        const y = centerY + sampleVal * amplitude * 1.5;
+        const sv = Math.abs(audio.waveform[i] || 0);
+        const y = centerY + sv * amplitude * 1.5;
         if (i === 0) ctx.moveTo(x, y);
         else {
-          const prevX = ((i - 1) / Math.max(samples - 1, 1)) * w;
-          const prevY = centerY + Math.abs(audio.waveform[i - 1] || 0) * amplitude * 1.5;
-          const cpX = (prevX + x) / 2;
-          ctx.quadraticCurveTo(cpX, prevY, x, y);
+          const px = ((i - 1) / Math.max(samples - 1, 1)) * w;
+          const py = centerY + Math.abs(audio.waveform[i - 1] || 0) * amplitude * 1.5;
+          ctx.quadraticCurveTo((px + x) / 2, py, x, y);
         }
       }
       ctx.stroke();
     }
 
     if (len > 1) {
-      const trailLen = Math.min(len, 60);
-      ctx.globalAlpha = 0.15;
+      const trailLen = Math.min(len, 50);
       ctx.lineWidth = 2;
 
       for (let t = 0; t < trailLen; t++) {
@@ -550,15 +579,11 @@ class RainbowWaveform {
         const entry = history[idx];
         if (!entry || !entry.waveform) continue;
         const progress = t / trailLen;
-        const trailAmplitude = amplitude * progress;
+        const trailAmp = amplitude * Math.pow(progress, 0.6);
 
-        const trailGradient = ctx.createLinearGradient(0, 0, w, 0);
-        const hue = (t * 3 + this._phase * 10) % 360;
-        trailGradient.addColorStop(0, `hsla(${hue}, 80%, 60%, ${0.05 * progress})`);
-        trailGradient.addColorStop(0.5, `hsla(${(hue + 60) % 360}, 80%, 60%, ${0.1 * progress})`);
-        trailGradient.addColorStop(1, `hsla(${(hue + 120) % 360}, 80%, 60%, ${0.05 * progress})`);
-
-        ctx.strokeStyle = trailGradient;
+        ctx.globalAlpha = 0.08 * progress;
+        const hue = (t * 4 + this._phase * 20) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 80%, 65%, 0.6)`;
         ctx.beginPath();
 
         const sw = entry.waveform.length;
@@ -566,7 +591,7 @@ class RainbowWaveform {
         for (let i = 0; i < sw; i++) {
           const x = (i / Math.max(sw - 1, 1)) * w;
           const sv = Math.abs(entry.waveform[i] || 0);
-          const y = centerY - sv * trailAmplitude;
+          const y = centerY - sv * trailAmp;
           i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.stroke();
@@ -577,25 +602,27 @@ class RainbowWaveform {
   }
 
   _drawParticles(ctx, w, h, cx, cy) {
-    if (!this.recording || this.audioData.rms < 0.005) {
+    if (!this.recording || this._displayRms < 0.003) {
       this._particles = [];
+      this._sparkles = [];
       return;
     }
 
-    const count = Math.floor(this.audioData.rms * 300) + 2;
+    const rms = this._displayRms;
+    const count = Math.floor(rms * 200) + 3;
 
     while (this._particles.length < count) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.3 + Math.random() * 1.5;
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.8;
+      const speed = 0.4 + Math.random() * 1.2;
       this._particles.push({
-        x: cx + (Math.random() - 0.5) * w * 0.6,
-        y: cy + (Math.random() - 0.5) * h * 0.3,
+        x: cx + (Math.random() - 0.5) * w * 0.5,
+        y: cy + (Math.random() - 0.5) * h * 0.2,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.5,
-        life: 0.5 + Math.random() * 0.5,
-        maxLife: 0.5 + Math.random() * 0.5,
-        size: 1 + Math.random() * 2.5,
-        hue: Math.random() * 360,
+        vy: Math.sin(angle) * speed - Math.random() * 0.3,
+        life: 0.6 + Math.random() * 0.6,
+        maxLife: 1.0 + Math.random() * 0.2,
+        size: 1.5 + Math.random() * 3,
+        hue: (this._phase * 40 + Math.random() * 60) % 360,
       });
     }
 
@@ -603,36 +630,71 @@ class RainbowWaveform {
       this._particles = this._particles.slice(-count * 2);
     }
 
-    ctx.globalAlpha = 0.6;
+    if (Math.random() < rms * 0.5) {
+      this._sparkles.push({
+        x: cx + (Math.random() - 0.5) * w * 0.7,
+        y: cy - h * 0.1 + Math.random() * h * 0.2,
+        vx: (Math.random() - 0.5) * 3,
+        vy: -Math.random() * 2 - 1,
+        life: 0.3 + Math.random() * 0.3,
+        maxLife: 0.6,
+        size: 0.5 + Math.random() * 1.5,
+        hue: (this._phase * 50 + Math.random() * 120) % 360,
+      });
+    }
+
+    ctx.globalAlpha = 0.5;
     for (let i = this._particles.length - 1; i >= 0; i--) {
       const p = this._particles[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.02;
-      p.life -= 0.008;
+      p.vy += 0.015;
+      p.life -= 0.006;
 
-      if (p.life <= 0 || p.x < -20 || p.x > w + 20 || p.y > h + 20) {
+      if (p.life <= 0 || p.x < -30 || p.x > w + 30 || p.y > h + 30) {
         this._particles.splice(i, 1);
         continue;
       }
 
-      const alpha = p.life / p.maxLife;
-      ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${alpha * 0.5})`;
+      const alpha = (p.life / p.maxLife) * 0.6;
+      ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${alpha})`;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
       ctx.fill();
     }
+
+    for (let i = this._sparkles.length - 1; i >= 0; i--) {
+      const s = this._sparkles[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.vy += 0.02;
+      s.life -= 0.02;
+
+      if (s.life <= 0) {
+        this._sparkles.splice(i, 1);
+        continue;
+      }
+
+      const alpha = (s.life / s.maxLife) * 0.8;
+      ctx.fillStyle = `hsla(${s.hue}, 100%, 80%, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size * (s.life / s.maxLife), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.globalAlpha = 1;
   }
 
-  _drawCenterGlow(ctx, cx, cy) {
-    if (this.recording && this.audioData.rms > 0.005) {
-      const rms = Math.min(this.audioData.rms * 300, 1);
-      const radius = 20 + rms * 40;
+  _drawCenterGlow(ctx, cx, cy, w) {
+    if (this._displayRms > 0.003) {
+      const rms = Math.min(this._displayRms * 300, 1);
+      const radius = 15 + rms * 50;
       const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      const hue = (this._phase * 30) % 360;
-      gradient.addColorStop(0, `hsla(${hue}, 90%, 65%, ${0.15 * rms})`);
-      gradient.addColorStop(0.5, `hsla(${(hue + 120) % 360}, 90%, 60%, ${0.08 * rms})`);
+      const hue = (this._phase * 40) % 360;
+      const intensity = 0.12 + rms * 0.12;
+      gradient.addColorStop(0, `hsla(${hue}, 100%, 70%, ${intensity})`);
+      gradient.addColorStop(0.3, `hsla(${(hue + 90) % 360}, 90%, 60%, ${intensity * 0.6})`);
+      gradient.addColorStop(0.6, `hsla(${(hue + 180) % 360}, 80%, 50%, ${intensity * 0.3})`);
       gradient.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gradient;
       ctx.beginPath();
